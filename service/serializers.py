@@ -2,17 +2,32 @@ from rest_framework import serializers
 from .models import Account, Bill
 
 class BillSerializer(serializers.ModelSerializer):
+    company = serializers.SerializerMethodField()
+    user = serializers.SerializerMethodField()
+
     class Meta:
         model = Bill
-        fields = ['amount', 'description']
+        fields = ['id','amount', 'description','company','user','paid']
+
+    def get_company(self,obj):
+        return obj.company.username
+
+    def get_user(self,obj):
+        return obj.user.username
 
 class AccountSerializer(serializers.ModelSerializer):
-    bills = serializers.PrimaryKeyRelatedField(many=True, queryset=Bill.objects.all())
-    bills = BillSerializer(bills,many=True)
+    bill = serializers.SerializerMethodField()
 
     class Meta:
         model = Account
-        fields = ['username','email','balance','bills']
+        fields = ['username','email','balance','bill']
+    
+    def get_bill(self,obj):
+        if obj.corperation:
+            return BillSerializer(obj.bill_set,many=True).data
+        else:
+            return BillSerializer(obj.user_bill,many=True).data
+
 
 class RegistrationSerializer(serializers.ModelSerializer):
 

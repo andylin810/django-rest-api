@@ -70,13 +70,17 @@ class Account(AbstractBaseUser):
         self.save()
 
 class Bill(models.Model):
-    user = models.ForeignKey(Account,on_delete=models.CASCADE, related_name='bills')
+    user = models.ForeignKey(Account,on_delete=models.CASCADE,related_name="user_bill")
     company = models.ForeignKey(Account,on_delete=models.CASCADE)
     amount = models.FloatField()
-    description = models.CharField(max_length=100)
+    description = models.CharField(max_length=100,blank=True,null=True)
+    paid = models.BooleanField(default=False)
 
     def save(self,*args,**kwargs):
         if self.company.corperation:
             super(Bill,self).save(*args,**kwargs)
         else:
             raise Exception("only company can create bills")
+
+    def validate_bill(self,user,company,amount,paid):
+            return self.user == user and self.company == company and self.amount == amount and not paid

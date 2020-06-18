@@ -10,7 +10,7 @@ from rest_framework import status
 from rest_framework.authentication import BasicAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics
-from .models import Account
+from .models import Account, Bill
 
 # Create your views here.
 
@@ -31,27 +31,56 @@ class AccountDetail(APIView):
         return Response(serializer.data)
  
     def put(self, request, name, format=None):
+        # get user account
         user = self.get_account(name)
         payee_name = ""
         response_data = {}
+        bill = None
+
+        # getting payee information if error return error message in Json reponse
         try:
             payee_name = request.data.get('payee')
         except:
             response_data['error'] = "Invalid Payee"
             return Response(response_data)
         payee = self.get_account(payee_name)
+
+        # getting bill information
         try:
             amount = request.data.get('balance')
+            bill_id = request.data.get('billID')
+
+            # if bill_id is received from json body
+            if bill_id:
+                # search for bill in database
+                try:
+                    bill = Bill.objects.get(id=bill_id)
+                    # validating bill if bill exists
+                    if not bill.validate_bill(user,payee,amount,bill.paid):
+                        response_data['bill_error'] = "Wrong bill"
+                        return Response(response_data)
+                # If bill doesn't exist create it
+                except Bill.DoesNotExist:
+                        bill = Bill(id=bill_id,user=user,company=payee,amount=amount,description=request.data.get('description'),paid=True)
+                        bill.save()
+            # if bill_id not indicated, create a new bill
+            else:
+                bill = Bill(user=user,company=payee,amount=amount,description=request.data.get('description'),paid=True) 
+
             paid = user.pay_bill(amount)
+
+            # payment validated and recipient receives payment and bill gets saved
             if paid is not None:
                 payee.receive_money(amount)
+                bill.description = request.data.get('description')
+                bill.paid = True
+                bill.save()
                 response_data['success'] = "payment success"
             else:
                 response_data['error'] = "Insufficient fund"
-            return Response(response_data)
         except:
             response_data['error'] = "unknown error"
-            return Response(response_data)
+        return Response(response_data)
 
 class RegisterView(APIView):
     def post(self,request):
