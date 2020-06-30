@@ -91,7 +91,15 @@ class RegisterView(APIView):
             response_data['reponse'] = "Registration Success"
             response_data['username'] = account.username
             response_data['email'] = account.email
-            response_data['corperation'] = "yes" if account.corperation else "no"
+            if account.corporation:
+                response_data['corporation'] = "yes"
+                response_data['industry'] = account.industry
+                response_data['company_name'] = account.company_name 
+            else:
+                response_data['corporation'] = "no"
+            response_data['address'] = account.address
+            response_data['postal_code'] = account.postal_code
+            response_data['phone_number'] = account.phone_number
         else:
             response_data = serializer.errors
         return Response(response_data)
