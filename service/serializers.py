@@ -62,7 +62,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
             elif self.validated_data.get('industry') is None:
                 raise serializers.ValidationError({'industry' : 'no industry, please indicate your industry'})
             else:
-                account.company_name = self.validated_data['corporation']
+                account.company_name = self.validated_data['company_name]
                 account.industry = self.validated_data['industry']
         account.set_password(password)
         account.save()
