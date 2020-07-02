@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import viewsets
-from .serializers import AccountSerializer, RegistrationSerializer
+from .serializers import AccountSerializer, RegistrationSerializer, PostBillSerializer
 from django.http import Http404
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -26,7 +26,7 @@ class AccountDetail(APIView):
     def get(self,request,name,format=None):
         user = self.get_account(name)
         if name != request.user.username:
-            return Response("not allowed to view other user's account")
+            return Response("not allowed to view other user's account", status=status.HTTP_400_BAD_REQUEST)
         serializer = AccountSerializer(user)
         return Response(serializer.data)
  
@@ -42,7 +42,7 @@ class AccountDetail(APIView):
             payee_name = request.data.get('payee')
         except:
             response_data['error'] = "Invalid Payee"
-            return Response(response_data)
+            return Response(response_data, status=status.HTTP_404_NOT_FOUND)
         payee = self.get_account(payee_name)
 
         # getting bill information
@@ -54,14 +54,14 @@ class AccountDetail(APIView):
             if bill_id:
                 # search for bill in database
                 try:
-                    bill = Bill.objects.get(id=bill_id)
+                    bill = Bill.objects.get(billID=bill_id)
                     # validating bill if bill exists
-                    if not bill.validate_bill(user,payee,amount,bill.paid):
+                    if not bill.validate_bill(payee,amount,bill.paid):
                         response_data['bill_error'] = "Wrong bill"
-                        return Response(response_data)
+                        return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
                 # If bill doesn't exist create it
                 except Bill.DoesNotExist:
-                        bill = Bill(id=bill_id,user=user,company=payee,amount=amount,description=request.data.get('description'),paid=True)
+                        bill = Bill(billID=bill_id,user=user,company=payee,amount=amount,description=request.data.get('description'),paid=True)
                         bill.save()
             # if bill_id not indicated, create a new bill
             else:
@@ -78,9 +78,10 @@ class AccountDetail(APIView):
                 response_data['success'] = "payment success"
             else:
                 response_data['error'] = "Insufficient fund"
+            return Response(response_data)
         except:
             response_data['error'] = "unknown error"
-        return Response(response_data)
+            return Response(response_data,status=status.HTTP_400_BAD_REQUEST)
 
 class RegisterView(APIView):
     def post(self,request):
@@ -100,7 +101,29 @@ class RegisterView(APIView):
             response_data['address'] = account.address
             response_data['postal_code'] = account.postal_code
             response_data['phone_number'] = account.phone_number
+            return Response(response_data)
         else:
             response_data = serializer.errors
-        return Response(response_data)
+            return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PostBillView(APIView):
+    authentication_classes = [BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self,request):
+        serializer = PostBillSerializer(data=request.data)
+        response_data = {}
+        if serializer.is_valid():
+            name = request.data.get("name")
+            if name != request.user.username:
+                return Response("You can only generate bill for you own account, please change name field to your username", status=status.HTTP_400_BAD_REQUEST)
+            bill = serializer.save()
+            response_data['reponse'] = "Post Bill Success"
+            response_data['billID'] = bill.billID
+            response_data['amount'] = bill.amount
+            return Response(response_data)
+        else:
+            response_data = serializer.errors
+            return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
 
