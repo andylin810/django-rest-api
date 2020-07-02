@@ -43,7 +43,8 @@ class AccountDetail(APIView):
         except:
             response_data['error'] = "Invalid Payee"
             return Response(response_data, status=status.HTTP_404_NOT_FOUND)
-        payee = self.get_account(payee_name)
+        
+        payee = Account.objects.get(username=payee_name)
 
         # getting bill information
         try:
@@ -61,7 +62,7 @@ class AccountDetail(APIView):
                         return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
                 # If bill doesn't exist create it
                 except Bill.DoesNotExist:
-                        bill = Bill(billID=bill_id,user=user,company=payee,amount=amount,description=request.data.get('description'),paid=True)
+                        bill = Bill(billID=bill_id,payer=user,receiver=payee,amount=amount,description=request.data.get('description'),paid=True)
                         bill.save()
             # if bill_id not indicated, create a new bill
             else:
