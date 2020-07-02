@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import viewsets
-from .serializers import AccountSerializer, RegistrationSerializer, PostBillSerializer
+from .serializers import AccountSerializer, RegistrationSerializer, PostBillSerializer, BillSerializer
 from django.http import Http404
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -79,7 +79,8 @@ class AccountDetail(APIView):
                 response_data['success'] = "payment success"
             else:
                 response_data['error'] = "Insufficient fund"
-            return Response(response_data)
+            serializer = BillSerializer(bill)
+            return Response(serializer.data)
         except:
             response_data['error'] = "unknown error"
             return Response(response_data,status=status.HTTP_400_BAD_REQUEST)
