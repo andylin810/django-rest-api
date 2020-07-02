@@ -102,4 +102,4 @@ class Bill(models.Model):
     paid = models.BooleanField(default=False)
 
     def validate_bill(self,receiver,amount,paid):
-            return self.receiver == receiver and self.amount == amount and not paid
+            return self.receiver == receiver and abs(self.amount - amount) < 0.1  and not paid
