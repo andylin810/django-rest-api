@@ -74,6 +74,7 @@ class AccountDetail(APIView):
             if paid is not None:
                 payee.receive_money(amount)
                 bill.description = request.data.get('description')
+                bill.payer = request.user
                 bill.paid = True
                 bill.save()
                 response_data['success'] = "payment success"
